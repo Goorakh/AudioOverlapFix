@@ -398,4 +398,5 @@ FodyWeavers.xsd
 *.sln.iml
 
 build/*/
+build/*.zip
 ModPluginPath.txt
