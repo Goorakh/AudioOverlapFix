@@ -36,6 +36,20 @@ namespace AudioOverlapFix
             return shouldPostEvent(AkSoundEngine.GetIDFromString(eventName));
         }
 
+        static uint tryPostEvent(bool shouldPost, uint playingID)
+        {
+            if (!shouldPost && playingID > 0)
+            {
+#if DEBUG
+                Log.Debug($"Stopping event {AkSoundEngine.GetEventIDFromPlayingID(playingID)} ({playingID})");
+#endif
+
+                AkSoundEngine.StopPlayingID(playingID);
+            }
+
+            return playingID;
+        }
+
         static bool _hasAppliedPatches = false;
         static void tryApplyPatches()
         {
@@ -49,10 +63,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID) =>
                     {
-                        if (!shouldPostEvent(in_eventID))
-                            return 0U;
-
-                        return orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID);
+                        bool shouldPost = shouldPostEvent(in_eventID);
+                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID));
                     });
                 }
                 else
@@ -68,10 +80,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources) =>
                     {
-                        if (!shouldPostEvent(in_eventID))
-                            return 0U;
-
-                        return orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources);
+                        bool shouldPost = shouldPostEvent(in_eventID);
+                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources));
                     });
                 }
                 else
@@ -87,10 +97,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie) =>
                     {
-                        if (!shouldPostEvent(in_eventID))
-                            return 0U;
-
-                        return orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie);
+                        bool shouldPost = shouldPostEvent(in_eventID);
+                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie));
                     });
                 }
                 else
@@ -106,10 +114,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<uint, GameObject, uint> orig, uint in_eventID, GameObject in_gameObjectID) =>
                     {
-                        if (!shouldPostEvent(in_eventID))
-                            return 0U;
-
-                        return orig(in_eventID, in_gameObjectID);
+                        bool shouldPost = shouldPostEvent(in_eventID);
+                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID));
                     });
                 }
                 else
@@ -125,10 +131,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID) =>
                     {
-                        if (!shouldPostEvent(in_pszEventName))
-                            return 0U;
-
-                        return orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID);
+                        bool shouldPost = shouldPostEvent(in_pszEventName);
+                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID));
                     });
                 }
                 else
@@ -144,10 +148,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources) =>
                     {
-                        if (!shouldPostEvent(in_pszEventName))
-                            return 0U;
-
-                        return orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources);
+                        bool shouldPost = shouldPostEvent(in_pszEventName);
+                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources));
                     });
                 }
                 else
@@ -163,10 +165,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie) =>
                     {
-                        if (!shouldPostEvent(in_pszEventName))
-                            return 0U;
-
-                        return orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie);
+                        bool shouldPost = shouldPostEvent(in_pszEventName);
+                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie));
                     });
                 }
                 else
@@ -182,10 +182,8 @@ namespace AudioOverlapFix
                 {
                     new Hook(method, (Func<string, GameObject, uint> orig, string in_pszEventName, GameObject in_gameObjectID) =>
                     {
-                        if (!shouldPostEvent(in_pszEventName))
-                            return 0U;
-
-                        return orig(in_pszEventName, in_gameObjectID);
+                        bool shouldPost = shouldPostEvent(in_pszEventName);
+                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID));
                     });
                 }
                 else
