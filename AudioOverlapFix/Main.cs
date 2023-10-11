@@ -69,9 +69,6 @@ namespace AudioOverlapFix
             if (post && !tryPlaySound(eventID))
             {
                 post = false;
-#if DEBUG
-                Log.Debug($"Prevented duplicate sound {eventID}");
-#endif
             }
         }
     }
