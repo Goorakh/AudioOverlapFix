@@ -35,7 +35,7 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="R2API.Core" Version="5.0.11" />
     <PackageReference Include="RiskOfRain2.GameLibs" Version="1.2.4-r.0" />
-    <PackageReference Include="Rune580-Risk_Of_Options" Version="2.7.0" />
+	<PackageReference Include="Rune580-Risk_Of_Options" Version="2.7.0" />
     <PackageReference Include="UnityEngine.Modules" Version="2019.4.26" />
     <PackageReference Include="MMHOOK.RoR2" Version="2022.9.20">
       <NoWarn>NU1701</NoWarn>
@@ -95,6 +95,8 @@
 		<MakeDir Directories="$(TSPackageDir);$(TSPackagePluginDir)" />
 		<Copy SourceFiles="$(SolutionDir)manifest.json;$(SolutionDir)README.md;$(SolutionDir)CHANGELOG.md" DestinationFolder="$(TSPackageDir)" />
 
+		<Copy SourceFiles="$(BuildDir)icon.png" DestinationFolder="$(TSPackageDir)" ContinueOnError="true" />
+		
 		<Copy SourceFiles="$(OutDir)/$(AssemblyName).dll" DestinationFolder="$(TSPackagePluginDir)" />
 
 		<Copy SourceFiles="$(OutDir)/$(AssemblyName).pdb" DestinationFolder="$(TSPackagePluginDir)" Condition="'$(Configuration)'=='Debug'" />
