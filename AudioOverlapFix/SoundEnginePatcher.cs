@@ -41,7 +41,7 @@ namespace AudioOverlapFix
             if (!shouldPost && playingID > 0)
             {
 #if DEBUG
-                Log.Debug($"Stopping event ID {AkSoundEngine.GetEventIDFromPlayingID(playingID)} (playingID={playingID})");
+                Log.Debug($"Stopping event ID {SoundEngineEventNameRecorder.GetEventDisplayString(AkSoundEngine.GetEventIDFromPlayingID(playingID))} (playingID={playingID})");
 #endif
 
                 AkSoundEngine.StopPlayingID(playingID);

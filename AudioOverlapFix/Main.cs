@@ -40,6 +40,10 @@ namespace AudioOverlapFix
 
             SoundEnginePatcher.OverridePostEvent += SoundEnginePatcher_OverridePostEvent;
 
+#if DEBUG
+            SoundEngineEventNameRecorder.Init();
+#endif
+
             stopwatch.Stop();
             Log.Info_NoCallerPrefix($"Initialized in {stopwatch.Elapsed.TotalSeconds:F2} seconds");
         }
