@@ -2,7 +2,7 @@
 	"name": "AudioOverlapFix",
 	"authorName": "Gorakh",
 	"displayName": "Audio Overlap Fix",
-	"version_number": "1.0.0",
+	"version_number": "1.1.0",
 	"website_url": "https://github.com/Goorakh/AudioOverlapFix",
 	"description": "Prevents multiple instances of the same sound from playing within the same frame, resulting in a sound potentially becoming very loud. Clientside.",
 	"dependencies": [
