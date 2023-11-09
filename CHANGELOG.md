@@ -1,3 +1,8 @@
+**1.2.0 Changes:**
+
+* Added config option to exclude Mithrix pizza from the mod
+  * This sound specifically seems to have been made with overlap in mind, so the mod made it really quiet.
+
 **1.1.0 Changes:**
 
 * Switched to less aggressive method of muting sounds events.
