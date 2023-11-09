@@ -29,6 +29,8 @@ namespace AudioOverlapFix
                 increment = 0.01f
             }), GUID, NAME);
 
+            ModSettingsManager.AddOption(new CheckBoxOption(Main.ExcludeMithrixPizzaSound, new CheckBoxConfig()), GUID, NAME);
+
             FileInfo iconFile = findPluginIconFile();
             if (iconFile != null && iconFile.Exists)
             {
