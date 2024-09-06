@@ -1,8 +1,9 @@
 ﻿using HarmonyLib;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using System;
 using System.Reflection;
-using UnityEngine;
 
 namespace AudioOverlapFix
 {
@@ -36,7 +37,7 @@ namespace AudioOverlapFix
             return shouldPostEvent(AkSoundEngine.GetIDFromString(eventName));
         }
 
-        static uint tryPostEvent(bool shouldPost, uint playingID)
+        static uint tryPostEvent(uint playingID, bool shouldPost)
         {
             if (!shouldPost && playingID > 0)
             {
@@ -56,141 +57,76 @@ namespace AudioOverlapFix
             if (_hasAppliedPatches)
                 return;
 
-            // static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID)
+            foreach (MethodInfo soundEngineMethod in typeof(AkSoundEngine).GetMethods(BindingFlags.Public | BindingFlags.Static))
             {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(uint), default, default, default, default, default, default, default));
-                if (method is not null)
+                if (!string.Equals(soundEngineMethod.Name, "PostEvent"))
+                    continue;
+
+                if (soundEngineMethod.ReturnType != typeof(uint))
                 {
-                    new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_eventID);
-                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID));
-                    });
+                    Log.Warning($"Unhandled return type '{soundEngineMethod.ReturnType.FullDescription()}'");
+                    continue;
                 }
-                else
+
+                ParameterInfo[] parameters = soundEngineMethod.GetParameters();
+
+                ParameterInfo eventIdOrNameParameter = null;
+                foreach (ParameterInfo parameterInfo in parameters)
                 {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID)");
+                    if (parameterInfo.ParameterType == typeof(uint))
+                    {
+                        if (string.Equals(parameterInfo.Name, "in_eventID", StringComparison.OrdinalIgnoreCase))
+                        {
+                            eventIdOrNameParameter = parameterInfo;
+                            break;
+                        }
+                    }
+                    else if (parameterInfo.ParameterType == typeof(string))
+                    {
+                        if (string.Equals(parameterInfo.Name, "in_pszEventName", StringComparison.OrdinalIgnoreCase))
+                        {
+                            eventIdOrNameParameter = parameterInfo;
+                            break;
+                        }
+                    }
+                }
+
+                if (eventIdOrNameParameter == null)
+                {
+                    Log.Warning($"Failed to find eventId or eventName parameter on method {soundEngineMethod.FullDescription()}");
+                    continue;
+                }
+
+                new ILHook(soundEngineMethod, tryPostEventManipulator);
+
+                void tryPostEventManipulator(ILContext il)
+                {
+                    ILCursor c = new ILCursor(il);
+
+                    while (c.TryGotoNext(MoveType.Before, x => x.MatchRet()))
+                    {
+                        c.Emit(OpCodes.Ldarg, eventIdOrNameParameter.Position);
+                        if (eventIdOrNameParameter.ParameterType == typeof(string))
+                        {
+                            c.EmitDelegate<Func<string, bool>>(shouldPostEvent);
+                        }
+                        else if (eventIdOrNameParameter.ParameterType == typeof(uint))
+                        {
+                            c.EmitDelegate<Func<uint, bool>>(shouldPostEvent);
+                        }
+                        else
+                        {
+                            throw new NotImplementedException($"Event parameter type '{eventIdOrNameParameter.ParameterType.FullDescription()}' is not implemented");
+                        }
+
+                        c.EmitDelegate(tryPostEvent);
+
+                        c.Index++;
+                    }
                 }
             }
 
-            // static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(uint), default, default, default, default, default, default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_eventID);
-                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources)");
-                }
-            }
-
-            // static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(uint), default, default, default, default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<uint, GameObject, uint, AkCallbackManager.EventCallback, object, uint> orig, uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_eventID);
-                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(uint in_eventID, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie)");
-                }
-            }
-
-            // static uint PostEvent(uint in_eventID, GameObject in_gameObjectID)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(uint), default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<uint, GameObject, uint> orig, uint in_eventID, GameObject in_gameObjectID) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_eventID);
-                        return tryPostEvent(shouldPost, orig(in_eventID, in_gameObjectID));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(uint in_eventID, GameObject in_gameObjectID)");
-                }
-            }
-
-            // static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(string), default, default, default, default, default, default, default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_pszEventName);
-                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources, in_PlayingID));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID)");
-                }
-            }
-
-            // static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(string), default, default, default, default, default, default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint, AkExternalSourceInfoArray, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_pszEventName);
-                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie, in_cExternals, in_pExternalSources));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie, uint in_cExternals, AkExternalSourceInfoArray in_pExternalSources, uint in_PlayingID)");
-                }
-            }
-
-            // static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(string), default, default, default, default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<string, GameObject, uint, AkCallbackManager.EventCallback, object, uint> orig, string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_pszEventName);
-                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID, in_uFlags, in_pfnCallback, in_pCookie));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID, uint in_uFlags, AkCallbackManager.EventCallback in_pfnCallback, object in_pCookie)");
-                }
-            }
-
-            // static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID)
-            {
-                MethodInfo method = SymbolExtensions.GetMethodInfo(() => AkSoundEngine.PostEvent(default(string), default));
-                if (method is not null)
-                {
-                    new Hook(method, (Func<string, GameObject, uint> orig, string in_pszEventName, GameObject in_gameObjectID) =>
-                    {
-                        bool shouldPost = shouldPostEvent(in_pszEventName);
-                        return tryPostEvent(shouldPost, orig(in_pszEventName, in_gameObjectID));
-                    });
-                }
-                else
-                {
-                    Log.Warning("Unable to find AkSoundEngine method: static uint PostEvent(string in_pszEventName, GameObject in_gameObjectID)");
-                }
-            }
+            // 8
 
             _hasAppliedPatches = true;
         }

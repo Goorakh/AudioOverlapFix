@@ -1,3 +1,7 @@
+**?.?.? Changes:**
+
+* Fixed for SotS
+
 **1.2.0 Changes:**
 
 * Added config option to exclude Mithrix pizza from the mod
